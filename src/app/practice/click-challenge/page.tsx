@@ -1,53 +1,80 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+
+const DURATION = 10_000; // ms
 
 export default function ClickChallenge() {
-  const [timeLeft, setTimeLeft] = useState(10);
+  const [timeLeft, setTimeLeft] = useState(DURATION / 1000);
   const [score, setScore] = useState(0);
   const [bestScore, setBestScore] = useState(0);
   const [running, setRunning] = useState(false);
+
+  const startedAt = useRef(0);
+  const frameRef = useRef<number>();
+  const scoreRef = useRef(0);
+  const bestScoreRef = useRef(0);
 
   // Load best score from localStorage on mount
   useEffect(() => {
     const stored = localStorage.getItem('click-challenge-best');
     if (stored) {
-      setBestScore(Number(stored));
+      const val = Number(stored);
+      setBestScore(val);
+      bestScoreRef.current = val;
     }
   }, []);
 
-  // Timer effect
+  // Timer effect based on time difference
   useEffect(() => {
     if (!running) return;
+    startedAt.current = performance.now();
 
-    if (timeLeft <= 0) {
-      setRunning(false);
-      if (score > bestScore) {
-        setBestScore(score);
-        localStorage.setItem('click-challenge-best', String(score));
+    const tick = () => {
+      const now = performance.now();
+      const remaining = Math.max(0, DURATION - (now - startedAt.current));
+      setTimeLeft(remaining / 1000);
+
+      if (remaining <= 0) {
+        setRunning(false);
+        const finalScore = scoreRef.current;
+        if (finalScore > bestScoreRef.current) {
+          bestScoreRef.current = finalScore;
+          setBestScore(finalScore);
+          localStorage.setItem('click-challenge-best', String(finalScore));
+        }
+        return;
       }
-      return;
-    }
 
-    const id = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
-    return () => clearTimeout(id);
-  }, [running, timeLeft, score, bestScore]);
+      frameRef.current = requestAnimationFrame(tick);
+    };
+
+    frameRef.current = requestAnimationFrame(tick);
+    return () => {
+      if (frameRef.current) cancelAnimationFrame(frameRef.current);
+    };
+  }, [running]);
 
   const startGame = () => {
     setScore(0);
-    setTimeLeft(10);
+    scoreRef.current = 0;
+    setTimeLeft(DURATION / 1000);
     setRunning(true);
   };
 
   const handleClick = () => {
     if (running && timeLeft > 0) {
-      setScore((s) => s + 1);
+      setScore((s) => {
+        const val = s + 1;
+        scoreRef.current = val;
+        return val;
+      });
     }
   };
 
   return (
     <div className="flex flex-col items-center gap-6 py-10">
-      <div className="text-6xl font-bold">{timeLeft}s</div>
+      <div className="text-6xl font-bold">{timeLeft.toFixed(1)}s</div>
       <div className="text-4xl">Score: {score}</div>
       <div className="text-2xl">Best: {bestScore}</div>
       {running ? (
