@@ -11,6 +11,12 @@ export default function Home() {
         >
           10秒クリックチャレンジ（スコア制）
         </Link>
+        <Link
+          href="/practice/double-click"
+          className="rounded border border-blue-600 px-4 py-2 text-blue-600 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          ダブルクリック練習へ
+        </Link>
         <Image
           className="dark:invert"
           src="/next.svg"
